@@ -5,7 +5,6 @@
 #![warn(dead_code)]
 
 #![feature(specialization)]
-#![feature(conservative_impl_trait)]
 
 //! This library provides tools for reading and writing documents in the Extensible Binary Markup
 //! Language format. Like XML, EBML is an extensible format with many possible elements, and has a
@@ -39,15 +38,13 @@
 //!   number for such elements. It is recommended to use `typenum::P8192` for this purpose.
 //! * The specification forbids elements whose container restrictions are by nesting level from
 //!   having unknown sizes. This crate does not enforce that rule.
-//! * This crate does not enforce the restriction that elements which must occur one or more times
-//!   in a container actually do so when building a container; it is enforced when parsing, as long
-//!   as you actually request it.
+//! * An EDTD can require that a container contains an element one or more times. That restriction
+//!   is only enforced when parsing.
 
 #[cfg(feature = "chrono")]
 extern crate chrono;
 extern crate typenum;
 
-pub mod read;
 pub mod restrictions;
 pub mod std_elems;
 pub mod std_containers;

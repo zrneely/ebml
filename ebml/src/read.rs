@@ -87,12 +87,12 @@ where
 
     pub fn read_zero_or_many_children_by_container<NC: Container>(
         &mut self
-    ) -> EbmlResult<impl Iterator<Item = ContainerReader<
-            NC,
-            typenum::Sum<L, typenum::P1>,
-            R,
-            &mut PeekableReader<R>,
-        >>>
+    ) -> EbmlResult<Vec<ContainerReader<
+        NC,
+        typenum::Sum<L, typenum::P1>,
+        R,
+        &mut PeekableReader<R>,
+    >>>
     where
         NC: Container<
             Cardinality = cardinality::ZeroOrMany,

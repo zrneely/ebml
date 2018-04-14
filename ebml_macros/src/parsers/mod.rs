@@ -3,7 +3,7 @@ use std::str::{self, FromStr};
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use ebml::Id;
-use nom::{AsChar, ErrorKind, IResult, Needed, is_digit, is_hex_digit};
+use nom::{self, AsChar, ErrorKind, Needed};
 
 use {BinaryRange, BinaryRangeItem, Cardinality, DateRange, DateRangeItem, FloatRange,
      FloatRangeItem, Header, HeaderStatement, IntRange, IntRangeItem, Level, NewType, Property,
@@ -44,53 +44,50 @@ fn from_hex(s: &str) -> Option<Vec<u8>> {
     }
 }
 
-named!(lcomment<&str>, map_res!(
-    preceded!(
-        tag!("//"),
-        take_until_and_consume!("\n")
-    ),
-    str::from_utf8
+named!(lcomment<&[u8]>, preceded!(
+    tag!("//"),
+    take_until_and_consume!("\n")
 ));
 
-named!(bcomment<&str>, map_res!(
-    preceded!(
-        tag!("/*"),
-        take_until_and_consume!("*/")
-    ),
-    str::from_utf8
+named!(bcomment<&[u8]>, delimited!(
+    tag!("/*"),
+    take_until!("*/"),
+    tag!("*/")
 ));
 
-named!(comment<&str>, ws!(alt!(lcomment | bcomment)));
+named!(comment<&[u8]>, alt_complete!(lcomment | bcomment));
 
-named!(sep<()>, ws!(value!((), many0!(comment))));
+named!(sep<()>, value!((), many0!(
+    alt_complete!(nom::sp | comment)
+)));
 
 // Sadly handwritten name parser.
-fn name(input: &[u8]) -> IResult<&[u8], &str> {
+fn name(input: &[u8]) -> Result<(&[u8], &str), nom::Err<&[u8]>> {
     let len = input.len();
     if len == 0 {
-        IResult::Incomplete(Needed::Size(1))
+        Err(nom::Err::Incomplete(Needed::Size(1)))
     } else {
         // The first character must be alpha or underscore
         let zeroth = input[0] as char;
         if !zeroth.is_alpha() && zeroth != '_' {
-            IResult::Error(error_position!(ErrorKind::AlphaNumeric, input))
+            Err(nom::Err::Error(error_position!(input, ErrorKind::AlphaNumeric)))
         } else {
             for (idx, item) in input[1..].iter().enumerate() {
                 if !item.is_alphanum() && item.as_char() != '_' {
-                    return IResult::Done(
+                    return Ok((
                         &input[idx + 1..],
                         str::from_utf8(&input[0..idx + 1]).unwrap()
-                    )
+                    ))
                 }
             }
-            IResult::Done(&input[len..], str::from_utf8(&input[..]).unwrap())
+            Ok((&input[len..], str::from_utf8(&input[..]).unwrap()))
         }
     }
 }
 
 named!(id<Id>, map_opt!(
     map_res!(
-        map_res!(take_while!(is_hex_digit), str::from_utf8),
+        map_res!(take_while!(nom::is_hex_digit), str::from_utf8),
         |str_val| u32::from_str_radix(str_val, 16)
     ),
     Id::from_encoded
@@ -121,13 +118,13 @@ named!(parents<Vec<&str>>, separated_nonempty_list_complete!(
 named!(level<Level>, do_parse!(
     tag!("level") >> sep >> tag!(":") >> sep >>
     start: map_res!(
-        map_res!(take_while!(is_digit), str::from_utf8),
+        map_res!(take_while!(nom::is_digit), str::from_utf8),
         FromStr::from_str
     ) >>
     tag!("..") >>
     end: opt!(
         map_res!(
-            map_res!(take_while!(is_digit), str::from_utf8),
+            map_res!(take_while!(nom::is_digit), str::from_utf8),
             FromStr::from_str
         )
     ) >>
@@ -153,7 +150,7 @@ named!(cardinality<Cardinality>, delimited!(
 
 named!(int_v<i64>, map_res!(
     map_res!(
-        take_while!(|x| is_digit(x) || x == b'-'),
+        take_while!(|x| nom::is_digit(x) || x == b'-'),
         str::from_utf8
     ),
     FromStr::from_str
@@ -161,7 +158,7 @@ named!(int_v<i64>, map_res!(
 
 named!(float_v<f64>, map_res!(
     map_res!(
-        take_while!(|x| is_digit(x) || x == b'-' || x == b'+' || x == b'.' || x == b'e'),
+        take_while!(|x| nom::is_digit(x) || x == b'-' || x == b'+' || x == b'.' || x == b'e'),
         str::from_utf8
     ),
     FromStr::from_str
@@ -204,7 +201,7 @@ named!(date_v<NaiveDateTime>, alt_complete!(
                     recognize!(
                         pair!(
                             tag!("."),
-                            take_while!(is_digit)
+                            take_while!(nom::is_digit)
                         )
                     ),
                     str::from_utf8
@@ -238,7 +235,7 @@ named!(binary_v<Vec<u8>>, alt_complete!(
     preceded!(
         tag!("0x"),
         map_opt!(
-            map_res!(take_while!(is_hex_digit), str::from_utf8),
+            map_res!(take_while!(nom::is_hex_digit), str::from_utf8),
             from_hex
         )
     ) |
@@ -263,7 +260,7 @@ named!(uint_def<Property>, delimited!(
     tuple!(tag!("def"), sep, tag!(":"), sep),
     map!(
         map_res!(
-            map_res!(take_while!(is_digit), str::from_utf8),
+            map_res!(take_while!(nom::is_digit), str::from_utf8),
             FromStr::from_str
         ),
         Property::UintDefault
@@ -337,12 +334,12 @@ named!(uint_range<Property>, delimited!(
             alt_complete!(
                 do_parse!(
                     start: map_res!(
-                        map_res!(take_while!(is_digit), str::from_utf8),
+                        map_res!(take_while!(nom::is_digit), str::from_utf8),
                         FromStr::from_str
                     ) >>
                     tag!("..") >>
                     end: map_res!(
-                        map_res!(take_while!(is_digit), str::from_utf8),
+                        map_res!(take_while!(nom::is_digit), str::from_utf8),
                         FromStr::from_str
                     ) >>
                     (UintRangeItem::Bounded { start, end })
@@ -350,7 +347,7 @@ named!(uint_range<Property>, delimited!(
                 map!(
                     terminated!(
                         map_res!(
-                            map_res!(take_while!(is_digit), str::from_utf8),
+                            map_res!(take_while!(nom::is_digit), str::from_utf8),
                             FromStr::from_str
                         ),
                         tag!("..")
@@ -359,7 +356,7 @@ named!(uint_range<Property>, delimited!(
                 ) |
                 map!(
                     map_res!(
-                        map_res!(take_while!(is_digit), str::from_utf8),
+                        map_res!(take_while!(nom::is_digit), str::from_utf8),
                         FromStr::from_str
                     ),
                     UintRangeItem::Single
@@ -467,12 +464,12 @@ named!(size<Property>, delimited!(
             alt_complete!(
                 do_parse!(
                     start: map_res!(
-                        map_res!(take_while!(is_digit), str::from_utf8),
+                        map_res!(take_while!(nom::is_digit), str::from_utf8),
                         FromStr::from_str
                     ) >>
                     tag!("..") >>
                     end: map_res!(
-                        map_res!(take_while!(is_digit), str::from_utf8),
+                        map_res!(take_while!(nom::is_digit), str::from_utf8),
                         FromStr::from_str
                     ) >>
                     (UintRangeItem::Bounded { start, end })
@@ -480,7 +477,7 @@ named!(size<Property>, delimited!(
                 map!(
                     terminated!(
                         map_res!(
-                            map_res!(take_while!(is_digit), str::from_utf8),
+                            map_res!(take_while!(nom::is_digit), str::from_utf8),
                             FromStr::from_str
                         ),
                         tag!("..")
@@ -489,7 +486,7 @@ named!(size<Property>, delimited!(
                 ) |
                 map!(
                     map_res!(
-                        map_res!(take_while!(is_digit), str::from_utf8),
+                        map_res!(take_while!(nom::is_digit), str::from_utf8),
                         FromStr::from_str
                     ),
                     UintRangeItem::Single
@@ -529,7 +526,7 @@ named!(header_statement<HeaderStatement>, do_parse!(
         // integers.
         map!(
             terminated!(
-                map_res!(map_res!(take_while!(is_digit), str::from_utf8), FromStr::from_str),
+                map_res!(map_res!(take_while!(nom::is_digit), str::from_utf8), FromStr::from_str),
                 pair!(sep, tag!(";"))
             ),
             |value| HeaderStatement::Uint { name, value }
@@ -575,26 +572,25 @@ fn update_newtype_with_property<'a, 'b>(mut nt: NewType<'a>, p: Property<'b>) ->
     nt
 }
 
-named!(dtype_param_open, dbg_dmp!(delimited!(sep, tag!("["), sep)));
-named!(dtype_param_close<()>, value!((), dbg_dmp!(tuple!(
+named!(dtype_param_open, delimited!(sep, tag!("["), sep));
+named!(dtype_param_close<()>, value!((), tuple!(
     sep,
     tag!("]"),
     sep,
     opt!(tag!(";"))
-))));
+)));
 
-named_args!(int_properties<'a>(name: &'a str)<NewType<'a>>, delimited!(
-    dbg_dmp!(dtype_param_open),
-    dbg_dmp!(value!(NewType::Int{name:"",default:None,range:None}, tag!("x"))),
-    //dbg_dmp!(fold_many1!(
-    //    alt!(delimited!(sep, int_range, sep) | delimited!(sep, int_def, sep)),
-    //    NewType::Int { name, default: None, range: None },
-    //    update_newtype_with_property
-    //)),
-    dbg_dmp!(dtype_param_close)
+named_args!(int_properties<'a>(name: &'a str) <NewType<'a>>, delimited!(
+    dtype_param_open,
+    fold_many1!(
+        alt!(delimited!(sep, int_range, sep) | delimited!(sep, int_def, sep)),
+        NewType::Int { name, default: None, range: None },
+        update_newtype_with_property
+    ),
+    dtype_param_close
 ));
 
-named_args!(uint_properties<'a>(name: &'a str)<NewType<'a>>, delimited!(
+named_args!(uint_properties<'a>(name: &'a str) <NewType<'a>>, delimited!(
     dtype_param_open,
     fold_many1!(
         alt!(uint_range | uint_def),
@@ -611,8 +607,8 @@ named!(dtype<NewType>, do_parse!(
     sep >>
     value: switch!(terminated!(type_, sep),
 
-        Type::Int => alt!(
-            dbg_dmp!(call!(int_properties, name)) |
+        Type::Int => alt_complete!(
+            call!(int_properties, name) |
             value!(
                 NewType::Int { name, default: None, range: None },
                 not!(dtype_param_open)
@@ -666,7 +662,7 @@ named!(dtype<NewType>, do_parse!(
         Type::String => alt_complete!(
             // It _has_ properties
             delimited!(
-                dbg_dmp!(dtype_param_open),
+                dtype_param_open,
                 fold_many1!(
                     preceded!(sep, alt_complete!(string_range | string_def)),
                     NewType::String { name, default: None, range: None },

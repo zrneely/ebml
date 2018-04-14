@@ -55,10 +55,6 @@ pub trait Container {
     fn get_id() -> Id;
 }
 
-//pub trait ContainerGet<R> {
-//    fn get(&self) -> EbmlResult<R>;
-//}
-
 /// A container containing one or more elements or containers. The second type parameter is the
 /// nesting level of the container.
 #[derive(Debug)]
@@ -66,34 +62,6 @@ pub struct ContainerImpl<C: Container, L> {
     _c: PhantomData<C>,
     _l: PhantomData<L>,
 }
-//impl<C, L, T> ContainerGet<Vec<T::Value>> for ContainerImpl<C, L>
-//where
-//    L: Add<typenum::P1>,
-//    C: Container<ChildOrder = child_order::Insignificant>,
-//    T: Element<
-//        Cardinality = cardinality::ZeroOrMany,
-//        MinAllowedLevel = AnyLevel,
-//        MaxAllowedLevel = AnyLevel,
-//        AllowedParent = C,
-//    >,
-//{
-//    fn get(&self) -> EbmlResult<Vec<T::Value>> {
-//        unimplemented!()
-//    }
-//}
-//impl<C, L, T> ContainerGet<Vec<T::Value>> for ContainerImpl<C, L>
-//where
-//    L: Add<typenum::P1>,
-//    C: Container<ChildOrder = child_order::Insignificant>,
-//    T: Element<Cardinality = cardinality::ZeroOrMany, AllowedParent = AnyContainer>,
-//    T::MaxAllowedLevel: typenum::IsGreater<L, Output = typenum::True>,
-//    T::MinAllowedLevel: typenum::IsLess<L, Output = typenum::True>,
-//{
-//    fn get(&self) -> EbmlResult<Vec<T::Value>> {
-//        unimplemented!()
-//    }
-//}
-
 
 impl<C, L> ContainerImpl<C, L>
 where
@@ -222,9 +190,9 @@ where
     ///
     /// * The child may occur zero or one times in the container.
     /// * The child is restricted by allowed level, and not by allowed parent.
-    pub fn get_zero_or_one_child_by_level<NC: Container>(
+    pub fn get_zero_or_one_child_by_level<NC>(
         &self,
-    ) -> ContainerImpl<NC, typenum::Sum<L, typenum::P1>>
+    ) -> Option<ContainerImpl<NC, typenum::Sum<L, typenum::P1>>>
     where
         NC: Container<Cardinality = cardinality::ZeroOrOne, AllowedParent = AnyContainer>,
         NC::MaxAllowedLevel: typenum::IsGreater<L, Output = typenum::True>,

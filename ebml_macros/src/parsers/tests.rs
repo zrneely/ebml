@@ -1,63 +1,52 @@
 use super::*;
 
-// TODO instead of taking the whole file name, just assume it's got the same name as the function
-// being tested and append a number (passed in place of the name)
 macro_rules! gen_test {
     ($fn_name:ident, $test_file:expr, $expected:expr) => (
         match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
-            ::nom::IResult::Done(_, val) => assert_eq!($expected, val),
-            ::nom::IResult::Error(err) => {
+            Ok((_, val)) => assert_eq!($expected, val),
+            Err(err) => {
                 println!("Error: {:?}", err);
-                assert!(false);
-            },
-            ::nom::IResult::Incomplete(amount) => {
-                println!("Incomplete: {:?}", amount);
                 assert!(false);
             },
         }
     );
     ($fn_name:ident, $test_file:expr, $expected:expr, $left:expr) => (
         match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
-            ::nom::IResult::Done(left, val) => {
+            Ok((left, val)) => {
                 assert_eq!($expected, val);
                 assert_eq!($left, left);
             },
-            ::nom::IResult::Error(err) => {
+            Err(err) => {
                 println!("Error: {:?}", err);
-                assert!(false);
-            },
-            ::nom::IResult::Incomplete(amount) => {
-                println!("Incomplete: {:?}", amount);
                 assert!(false);
             },
         }
     );
     (fail $fn_name:ident, $test_file:expr) => (
         match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
-            ::nom::IResult::Done(_, result) => {
+            Ok((_, result)) => {
                 println!("Unexpected success: {:?}", result);
                 assert!(false);
             }
-            ::nom::IResult::Incomplete(_) => assert!(false),
-            ::nom::IResult::Error(_) => {},
+            Err(_) => {},
         }
     );
 }
 
 #[test]
 fn test_lcomment() {
-    gen_test!(lcomment, "lcomment", " comment");
+    gen_test!(lcomment, "lcomment", b" comment");
 }
 
 #[test]
 fn test_bcomment() {
-    gen_test!(bcomment, "bcomment", " comment ");
+    gen_test!(bcomment, "bcomment", b" comment ");
 }
 
 #[test]
 fn test_comment() {
-    gen_test!(comment, "lcomment", " comment");
-    gen_test!(comment, "bcomment", " comment ");
+    gen_test!(comment, "lcomment", b" comment");
+    gen_test!(comment, "bcomment", b" comment ");
 }
 
 #[test]
