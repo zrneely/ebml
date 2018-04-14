@@ -1,8 +1,6 @@
-[package]
-name = "ebml"
-version = "0.1.0"
-authors = ["Zachary Neely <zrussellneely@gmail.com> <zrussellneely@gmail.com>"]
+[workspace]
 
-[dependencies]
-chrono = { optional = true, version = "0.4" }
-typenum = "1"
+members = [
+    "ebml",
+    "ebml_macros",
+]

@@ -1,0 +1,14 @@
+FooA // name
+:= // required separator
+string // type
+// here come the parameters
+[ // parameter list opener
+default: // we're defining the default value
+"elephant" // the default value is elephant
+; // we need this
+// we also want to define the range
+range:// yep
+12352..12447,32..127 // ascii and hiragana
+; // required terminator
+] // parameter list closer
+// no semicolon

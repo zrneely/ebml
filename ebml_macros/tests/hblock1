@@ -1,0 +1,6 @@
+declare // test
+            header /*test*/ {
+test // intrusive
+:= /* comments */
+                                            1 /* everywhere */ // even here
+/**/;}  // wow

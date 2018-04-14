@@ -1,0 +1,14 @@
+declare header {
+    FooBar := 1;
+    Foo1 := "test";
+    FooBaz/*   */
+    //
+
+    := 0xFADEF00D;
+                        FooQux:=20000101T00:00:00;
+Foo
+/*
+//
+*/
+:= "隣町";
+}
