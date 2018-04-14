@@ -15,26 +15,39 @@ impl Id {
     /// Attempts to read an `Id` from a data source.
     pub(crate) fn load<R: Read>(source: &mut PeekableReader<R>) -> EbmlResult<Self> {
         let size = Size::load(source)?;
-        let value = size.get_value().ok_or(EbmlError::IdOutOfRange)?;
-
-        Ok(match size.get_width() {
-            1 if value >  0x00 && value < 0x7F => Id { data: size },
-            2 if value >= 0x7F && value < 0x3FFF => Id { data: size },
-            3 if value >= 0x3FFF && value < 0x1F_FFFF => Id { data: size },
-            4 if value >= 0x1F_FFFF && value < 0x0FFF_FFFF => Id { data: size },
-
-            _ => return Err(EbmlError::IdOutOfRange),
-        })
+        if size.get_width() <= 4 {
+            Ok(Id { data: size })
+        } else {
+            Err(EbmlError::IdOutOfRange)
+        }
     }
 
-    /// Attempts to write an `Id` to a data source.
+    /// Attempts to write an `Id` to a data sink.
     pub(crate) fn write<W: Write>(_target: &mut W) -> EbmlResult<()> {
         unimplemented!("writing not yet supported")
+    }
+
+    /// Constructs an EBML ID from its encoded representation.
+    pub fn from_encoded(data: u32) -> Option<Self> {
+        if data        >= 0x0000_0080 && data <= 0x0000_00FE {
+            Self::new_class_a((data & 0x7F) as u8)
+        } else if data >= 0x0000_4000 && data <= 0x0000_7FFF {
+            Self::new_class_b((data & 0x3FFF) as u16)
+        } else if data >= 0x0020_0000 && data <= 0x003F_FFFF {
+            Self::new_class_c(data & 0x1F_FFFF)
+        } else if data >= 0x1000_0000 && data <= 0x1FFF_FFFF {
+            Self::new_class_d(data & 0x0FFF_FFFF)
+        } else {
+            None
+        }
     }
 
     /// Constructs an EBML Class A ID (width 1) from its literal value, returning `None` if the
     /// value is not in range for the ID. The range of valid values is 0x01 to 0x7E inclusive, so
     /// there are 126 possible Class A IDs.
+    ///
+    /// This does _not_ take the 'encoded' form of the ID.
+    // TODO make this and similar const
     pub fn new_class_a(data: u8) -> Option<Self> {
         if data == 0u8 || data >= 0x7Fu8 {
             None
@@ -46,6 +59,8 @@ impl Id {
     /// Constructs an EBML Class B ID (width 2) from its literal value, returning `None` if the
     /// value is not in range for the ID. The range of valid values is 0x7F to 0x3FFE inclusive, so
     /// there are 16256 Class B IDs.
+    ///
+    /// This does _not_ take the 'encoded' form of the ID.
     pub fn new_class_b(data: u16) -> Option<Self> {
         if data < 0x7Fu16 || data >= 0x3FFFu16 {
             None
@@ -57,6 +72,8 @@ impl Id {
     /// Constructs an EBML Class C ID (width 3) from its literal value, returning `None` if the
     /// value is not in range for the ID. The range of valid values is 0x3FFF to 0x1F_FFFE
     /// inclusive, so there are 2080768 Class C IDs.
+    ///
+    /// This does _not_ take the 'encoded' form of the ID.
     pub fn new_class_c(data: u32) -> Option<Self> {
         if data < 0x3FFF || data >= 0x1F_FFFF {
             None
@@ -68,6 +85,8 @@ impl Id {
     /// Constructs an EBML Class D ID (width 4) from its literal value, returning `None` if the
     /// value is not in range for the ID. The range of valid values is 0x001F_FFFF to 0x0FFF_FFFE
     /// inclusive, so there are 266338304 Class D IDs.
+    ///
+    /// This does _not_ take the 'encoded' form of the ID.
     pub fn new_class_d(data: u32) -> Option<Self> {
         if data < 0x1F_FFFF || data >= 0x0FFF_FFFF {
             None
@@ -78,6 +97,7 @@ impl Id {
 
     /// Gets the width of the ID. A width of 1 means the ID is Class A, width of 2 means Class B,
     /// etc.
+    // TODO make this const
     pub fn get_width(&self) -> usize {
         self.data.get_width()
     }

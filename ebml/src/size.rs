@@ -5,8 +5,16 @@ use std::io::{Read, Write};
 use error::EbmlResult;
 use peek::PeekableReader;
 
+// The reserved "unknown" values have these heads and tails of 0xFF.
 const UNKNOWN_HEAD_VALUES: [u8; 8] = [0xFF, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01];
+// The bitmask applied to the head to decode it as part of the real value.
 const HEAD_MASK_VALUES: [u8; 8] = [0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01, 0x00];
+
+/// An integer with a special value, representing an unknown size.
+pub const UNKNOWN_SIZE: Size = Size {
+    head: 0xFF,
+    tail: [0; 7],
+};
 
 /// An unsigned variable-width integer, used by EBML to represent a size. It can also represent an
 /// unknown size. The range of this integer is 0 to 2^56 - 2.
@@ -16,7 +24,7 @@ const HEAD_MASK_VALUES: [u8; 8] = [0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01, 0x0
 #[derive(Debug, Clone)]
 pub struct Size {
     head: u8,
-    tail: [u8; 7], // the "length" of the array is head.leading_zeros()
+    tail: [u8; 7], // the "length" of the array is head.leading_zeros(). MSB always at index 0.
 }
 impl Size {
     /// Attempts to read a `Size` from a data source.
@@ -46,32 +54,21 @@ impl Size {
         self.head.leading_zeros() as usize + 1
     }
 
-    /// Returns an integer with a special value, representing an unknown size.
-    pub fn get_unknown() -> Self {
-        Size {
-            head: 0xFF,
-            tail: [0; 7],
-        }
-    }
-
     /// Retrieves the value as a `u64`, returning `None` if this represents an unknown size.
     pub fn get_value(&self) -> Option<u64> {
         let tail_len = self.head.leading_zeros() as usize;
-        // TODO this doesn't need to allocate
-        let tail: Vec<_> = self.tail
-            .iter()
-            .take(tail_len)
-            .cloned()
-            .collect();
-        if tail.iter().all(|x| *x == 0xFFu8) && self.head == UNKNOWN_HEAD_VALUES[tail_len] {
+
+        if self.tail[..tail_len].iter().all(|x| *x == 0xFFu8) &&
+                self.head == UNKNOWN_HEAD_VALUES[tail_len] {
             return None;
         }
 
         let mut mantissa = 1u64;
         let mut value = 0u64;
 
-        for byte in tail.iter().rev() {
-            value += mantissa * (*byte as u64);
+        for i in 0..tail_len {
+            // The tail always stores the MSB at position 0.
+            value += mantissa * (self.tail[tail_len - 1 - i] as u64);
             mantissa <<= 8;
         }
         Some(
@@ -307,7 +304,7 @@ mod tests {
     fn ord_eq() {
         let x: Size = 4u8.into();
         let y: Size = 5u32.into();
-        let z = Size::get_unknown();
+        let z = UNKNOWN_SIZE;
 
         assert_eq!(x, x);
         assert_ne!(x, y);
@@ -336,7 +333,7 @@ mod tests {
 
     #[test]
     fn unknown() {
-        let x = Size::get_unknown();
+        let x = UNKNOWN_SIZE;
         assert_eq!(0b1111_1111, x.head);
         assert_eq!(1, x.get_width());
         assert!(x.get_value().is_none());

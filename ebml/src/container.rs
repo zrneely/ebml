@@ -190,9 +190,9 @@ where
     ///
     /// * The child may occur zero or one times in the container.
     /// * The child is restricted by allowed level, and not by allowed parent.
-    pub fn get_zero_or_one_child_by_level<NC>(
+    pub fn get_zero_or_one_child_by_level<NC: Container>(
         &self,
-    ) -> Option<ContainerImpl<NC, typenum::Sum<L, typenum::P1>>>
+    ) -> ContainerImpl<NC, typenum::Sum<L, typenum::P1>>
     where
         NC: Container<Cardinality = cardinality::ZeroOrOne, AllowedParent = AnyContainer>,
         NC::MaxAllowedLevel: typenum::IsGreater<L, Output = typenum::True>,

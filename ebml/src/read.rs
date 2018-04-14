@@ -14,7 +14,14 @@ use error::EbmlError;
 use peek::PeekableReader;
 use std_containers::EbmlHeader;
 
-/// A source for elements in a container.
+// TODO: Don't actually do this; generate a concrete type for each container and value using the
+// macro.
+/// A source for elements in a container. The parameters are:
+///
+/// C: the container we're reading.
+/// L: the depth of the current container (using typenum).
+/// R: the type of underlying reader.
+/// B: the type of the actual reader.
 #[derive(Debug)]
 pub struct ContainerReader<C: Container, L, R: Read, B: BorrowMut<PeekableReader<R>>> {
     _c: PhantomData<C>,
@@ -87,12 +94,12 @@ where
 
     pub fn read_zero_or_many_children_by_container<NC: Container>(
         &mut self
-    ) -> EbmlResult<Vec<ContainerReader<
-        NC,
-        typenum::Sum<L, typenum::P1>,
-        R,
-        &mut PeekableReader<R>,
-    >>>
+    ) -> EbmlResult<impl Iterator<Item = ContainerReader<
+            NC,
+            typenum::Sum<L, typenum::P1>,
+            R,
+            &mut PeekableReader<R>,
+        >>>
     where
         NC: Container<
             Cardinality = cardinality::ZeroOrMany,

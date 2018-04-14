@@ -6,6 +6,8 @@ use container::Container;
 
 use typenum;
 
+//const TEST_ID: Id = Id::new_class_a(0x20).unwrap();
+
 /// The EBML header which all documents must begin with.
 #[derive(Debug)]
 pub enum EbmlHeader {}
