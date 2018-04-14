@@ -1,0 +1,3 @@
+range:// yep
+12352..12447,32..127 // ascii and hiragana
+; // required terminator

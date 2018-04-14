@@ -2,30 +2,36 @@ use super::*;
 
 macro_rules! gen_test {
     ($fn_name:ident, $test_file:expr, $expected:expr) => (
-        match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
+        let bytes = include_bytes!(concat!("../../tests/", $test_file));
+        println!("Testing {} with {}: {:?}...", stringify!($fn_name), stringify!($test_file), ::std::str::from_utf8(bytes).unwrap());
+        match ::parsers::$fn_name(bytes) {
             Ok((_, val)) => assert_eq!($expected, val),
             Err(err) => {
-                println!("Error: {:?}", err);
+                println!("Error: {:#?}", err);
                 assert!(false);
             },
         }
     );
     ($fn_name:ident, $test_file:expr, $expected:expr, $left:expr) => (
-        match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
+        let bytes = include_bytes!(concat!("../../tests/", $test_file));
+        println!("Testing {} with {}: {:?}...", stringify!($fn_name), stringify!($test_file), ::std::str::from_utf8(bytes).unwrap());
+        match ::parsers::$fn_name(bytes) {
             Ok((left, val)) => {
                 assert_eq!($expected, val);
                 assert_eq!($left, left);
             },
             Err(err) => {
-                println!("Error: {:?}", err);
+                println!("Error: {:#?}", err);
                 assert!(false);
             },
         }
     );
     (fail $fn_name:ident, $test_file:expr) => (
-        match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
+        let bytes = include_bytes!(concat!("../../tests/", $test_file));
+        println!("Testing {} with {}: {:?} (expect fail)...", stringify!($fn_name), stringify!($test_file), ::std::str::from_utf8(bytes).unwrap());
+        match ::parsers::$fn_name(bytes) {
             Ok((_, result)) => {
-                println!("Unexpected success: {:?}", result);
+                println!("Unexpected success: {:#?}", result);
                 assert!(false);
             }
             Err(_) => {},
@@ -35,24 +41,26 @@ macro_rules! gen_test {
 
 #[test]
 fn test_lcomment() {
-    gen_test!(lcomment, "lcomment", b" comment");
+    gen_test!(lcomment, "lcomment", b" comment", b"text\nmore text\n");
 }
 
 #[test]
 fn test_bcomment() {
-    gen_test!(bcomment, "bcomment", b" comment ");
+    gen_test!(bcomment, "bcomment", b" comment ", b"text\nmore text\n");
 }
 
 #[test]
 fn test_comment() {
-    gen_test!(comment, "lcomment", b" comment");
-    gen_test!(comment, "bcomment", b" comment ");
+    gen_test!(comment, "lcomment", b" comment", b"text\nmore text\n");
+    gen_test!(comment, "bcomment", b" comment ", b"text\nmore text\n");
 }
 
 #[test]
 fn test_separator() {
     gen_test!(sep, "separator0", (), b"test\n");
     gen_test!(sep, "separator1", (), b"t\n");
+    gen_test!(sep, "separator2", (), b"q\n");
+    gen_test!(sep, "separator3", (), b"text\nmore text\n");
 }
 
 #[test]
@@ -112,7 +120,7 @@ fn test_level() {
 
 #[test]
 fn test_cardinality() {
-    gen_test!(cardinality, "cardinality0", Cardinality::ZeroOrMany);
+    gen_test!(cardinality, "cardinality0", Cardinality::ZeroOrMany, b"\n");
     gen_test!(cardinality, "cardinality1", Cardinality::ZeroOrOne);
     gen_test!(cardinality, "cardinality2", Cardinality::ExactlyOne);
     gen_test!(cardinality, "cardinality3", Cardinality::OneOrMany);
@@ -249,6 +257,10 @@ fn test_uint_range() {
         UintRangeItem::Bounded { start: 66, end: 70 },
     ]));
     gen_test!(fail uint_range, "uint_range5");
+    gen_test!(uint_range, "uint_range6", Property::UintRange(vec![
+        UintRangeItem::Bounded { start: 12352, end: 12447 },
+        UintRangeItem::Bounded { start: 32, end: 127 },
+    ]));
 }
 
 #[test]
