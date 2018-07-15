@@ -12,7 +12,7 @@
 //! ##Errata:
 //!
 //! * The specification gives no upper bound on the value of integer literals. We limit them to the
-//!   values representable by a signed 64-bit number.
+//!   values representable by a signed 64-bit integer.
 //! * The specification states that dates are always given in "ISO short form", referring to ISO 8601.
 //!   However, it then goes on to replicate part of the specification, with two mistakes: the EBML
 //!   specification says that times must always be given in HH:MM:SS format, but ISO 8601 specifies
@@ -28,7 +28,7 @@
 //!   examples, it shows them ending with semicolons; in others, it shows them without. We elect to
 //!   make the semicolon optional (but recommended).
 //! * There is a line in the specification which says that properties of elements and new types
-//!   must be enclosed in angle brackets, the BNF it gives specifies parentheses, and every example
+//!   must be enclosed in angle brackets, but the BNF it gives specifies parentheses. Every example
 //!   uses square brackets. We accept square brackets only.
 
 extern crate chrono;

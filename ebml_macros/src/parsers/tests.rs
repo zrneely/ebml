@@ -1,29 +1,38 @@
 use super::*;
+use nom::types::CompleteByteSlice;
 
 macro_rules! gen_test {
     ($fn_name:ident, $test_file:expr, $expected:expr) => (
-        match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
+        match ::parsers::$fn_name(
+            ::nom::types::CompleteByteSlice(&include_bytes!(concat!("../../tests/", $test_file))[..])
+        ) {
             Ok((_, val)) => assert_eq!($expected, val),
             Err(err) => {
-                println!("Error: {:?}", err);
+                println!("Error (expected: {:?}): {:?}", $expected, err);
                 assert!(false);
             },
         }
     );
     ($fn_name:ident, $test_file:expr, $expected:expr, $left:expr) => (
-        match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
+        match ::parsers::$fn_name(
+            ::nom::types::CompleteByteSlice(&include_bytes!(concat!("../../tests/", $test_file))[..])
+        ) {
             Ok((left, val)) => {
+                println!("Testing that expected matches...");
                 assert_eq!($expected, val);
-                assert_eq!($left, left);
+                println!("Testing that left matches...");
+                assert_eq!($left, *left);
             },
             Err(err) => {
-                println!("Error: {:?}", err);
+                println!("Error (expected: {:?}; expected left: {:?}): {:?}", $expected, $left, err);
                 assert!(false);
             },
         }
     );
     (fail $fn_name:ident, $test_file:expr) => (
-        match ::parsers::$fn_name(include_bytes!(concat!("../../tests/", $test_file))) {
+        match ::parsers::$fn_name(
+            ::nom::types::CompleteByteSlice(&include_bytes!(concat!("../../tests/", $test_file))[..])
+        ) {
             Ok((_, result)) => {
                 println!("Unexpected success: {:?}", result);
                 assert!(false);
@@ -35,18 +44,18 @@ macro_rules! gen_test {
 
 #[test]
 fn test_lcomment() {
-    gen_test!(lcomment, "lcomment", b" comment");
+    gen_test!(lcomment, "lcomment", CompleteByteSlice(b" comment"));
 }
 
 #[test]
 fn test_bcomment() {
-    gen_test!(bcomment, "bcomment", b" comment ");
+    gen_test!(bcomment, "bcomment", CompleteByteSlice(b" comment "));
 }
 
 #[test]
 fn test_comment() {
-    gen_test!(comment, "lcomment", b" comment");
-    gen_test!(comment, "bcomment", b" comment ");
+    gen_test!(comment, "lcomment", CompleteByteSlice(b" comment"));
+    gen_test!(comment, "bcomment", CompleteByteSlice(b" comment "));
 }
 
 #[test]
@@ -123,8 +132,8 @@ fn test_cardinality() {
 fn test_int_v() {
     gen_test!(int_v, "int0", 1234);
     gen_test!(int_v, "int1", -1234);
-    gen_test!(int_v, "int2", 0x7FFF_FFFF_FFFF_FFFF);
-    gen_test!(int_v, "int3", -9223372036854775808);
+    gen_test!(int_v, "int2", 0x7FFF_FFFF_FFFF_FFFFi64);
+    gen_test!(int_v, "int3", -9223372036854775808i64);
     gen_test!(fail int_v, "int4");
     gen_test!(fail int_v, "int5");
 }

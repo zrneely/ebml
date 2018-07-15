@@ -5,7 +5,6 @@
 #![warn(dead_code)]
 
 #![feature(specialization)]
-#![feature(conservative_impl_trait)]
 #![feature(const_fn)]
 
 //! This library provides tools for reading and writing documents in the Extensible Binary Markup

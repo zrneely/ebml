@@ -6,8 +6,8 @@ authors = ["Zachary Neely <zrussellneely@gmail.com>"]
 [dependencies]
 chrono = "0.4"
 ebml = { path = "../ebml"}
-nom = { version = "4.0.0-beta3", features = ["verbose-errors"] }
-quote = "0.5"
+nom = { version = "4", features = ["verbose-errors"] }
+quote = "0.6"
 
 clippy = { optional = true, version = "*" }
 

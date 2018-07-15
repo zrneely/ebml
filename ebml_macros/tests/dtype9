@@ -3,7 +3,7 @@ FooA // name
 string // type
 // here come the parameters
 [ // parameter list opener
-default: // we're defining the default value
+def: // we're defining the default value
 "elephant" // the default value is elephant
 ; // we need this
 // we also want to define the range

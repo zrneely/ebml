@@ -1,3 +1,0 @@
-bar123 // something
-:=
-int [ range:-25..100; /*look a comment */def: 25; ]
