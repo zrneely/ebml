@@ -3,20 +3,22 @@ use nom::types::CompleteByteSlice;
 
 macro_rules! gen_test {
     ($fn_name:ident, $test_file:expr, $expected:expr) => (
-        match ::parsers::$fn_name(
-            ::nom::types::CompleteByteSlice(&include_bytes!(concat!("../../tests/", $test_file))[..])
-        ) {
+        let bytes = include_bytes!(concat!("../../tests/", $test_file));
+        println!("Testing {} with {}: {:?}...", stringify!($fn_name), stringify!($test_file), ::std::str::from_utf8(bytes).unwrap());
+
+        match ::parsers::$fn_name(::nom::types::CompleteByteSlice(&bytes[..])) {
             Ok((_, val)) => assert_eq!($expected, val),
             Err(err) => {
-                println!("Error (expected: {:?}): {:?}", $expected, err);
+                println!("Error (expected: {:#?}): {:#?}", $expected, err);
                 assert!(false);
             },
         }
     );
     ($fn_name:ident, $test_file:expr, $expected:expr, $left:expr) => (
-        match ::parsers::$fn_name(
-            ::nom::types::CompleteByteSlice(&include_bytes!(concat!("../../tests/", $test_file))[..])
-        ) {
+        let bytes = include_bytes!(concat!("../../tests/", $test_file));
+        println!("Testing {} with {}: {:?}...", stringify!($fn_name), stringify!($test_file), ::std::str::from_utf8(bytes).unwrap());
+
+        match ::parsers::$fn_name(::nom::types::CompleteByteSlice(&bytes[..])) {
             Ok((left, val)) => {
                 println!("Testing that expected matches...");
                 assert_eq!($expected, val);
@@ -24,17 +26,18 @@ macro_rules! gen_test {
                 assert_eq!($left, *left);
             },
             Err(err) => {
-                println!("Error (expected: {:?}; expected left: {:?}): {:?}", $expected, $left, err);
+                println!("Error (expected: {:#?}; expected left: {:#?}): {:#?}", $expected, $left, err);
                 assert!(false);
             },
         }
     );
     (fail $fn_name:ident, $test_file:expr) => (
-        match ::parsers::$fn_name(
-            ::nom::types::CompleteByteSlice(&include_bytes!(concat!("../../tests/", $test_file))[..])
-        ) {
+        let bytes = include_bytes!(concat!("../../tests/", $test_file));
+        println!("Testing {} with {}: {:?} (expect fail)...", stringify!($fn_name), stringify!($test_file), ::std::str::from_utf8(bytes).unwrap());
+
+        match ::parsers::$fn_name(::nom::types::CompleteByteSlice(&bytes[..])) {
             Ok((_, result)) => {
-                println!("Unexpected success: {:?}", result);
+                println!("Unexpected success: {:#?}", result);
                 assert!(false);
             }
             Err(_) => {},
@@ -62,6 +65,8 @@ fn test_comment() {
 fn test_separator() {
     gen_test!(sep, "separator0", (), b"test\n");
     gen_test!(sep, "separator1", (), b"t\n");
+    gen_test!(sep, "separator2", (), b"q\n");
+    gen_test!(sep, "separator3", (), b"text\r\nmore text\r\n");
 }
 
 #[test]
@@ -121,7 +126,7 @@ fn test_level() {
 
 #[test]
 fn test_cardinality() {
-    gen_test!(cardinality, "cardinality0", Cardinality::ZeroOrMany);
+    gen_test!(cardinality, "cardinality0", Cardinality::ZeroOrMany, b"\n");
     gen_test!(cardinality, "cardinality1", Cardinality::ZeroOrOne);
     gen_test!(cardinality, "cardinality2", Cardinality::ExactlyOne);
     gen_test!(cardinality, "cardinality3", Cardinality::OneOrMany);
@@ -258,6 +263,10 @@ fn test_uint_range() {
         UintRangeItem::Bounded { start: 66, end: 70 },
     ]));
     gen_test!(fail uint_range, "uint_range5");
+    gen_test!(uint_range, "uint_range6", Property::UintRange(vec![
+        UintRangeItem::Bounded { start: 12352, end: 12447 },
+        UintRangeItem::Bounded { start: 32, end: 127 },
+    ]));
 }
 
 #[test]
