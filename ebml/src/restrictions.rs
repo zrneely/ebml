@@ -22,7 +22,7 @@ pub struct Intersecton<V: EbmlValue> {
     restrictions: Vec<Box<Restriction<V>>>,
     _value: PhantomData<V>,
 }
-default impl<V: EbmlValue> Restriction<V> for Intersecton<V> {
+impl<V: EbmlValue> Restriction<V> for Intersecton<V> {
     fn matches(&self, value: &V) -> bool {
         self.restrictions.iter().all(|r| r.matches(value))
     }

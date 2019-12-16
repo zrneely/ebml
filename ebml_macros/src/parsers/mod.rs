@@ -58,7 +58,7 @@ fn from_hex(s: CompleteByteSlice) -> Option<Vec<u8>> {
 
 named!(lcomment<CompleteByteSlice, CompleteByteSlice>, preceded!(
     tag!("//"),
-    take_until_and_consume!("\n")
+    take_till!(nom::eol)
 ));
 
 named!(bcomment<CompleteByteSlice, CompleteByteSlice>, delimited!(

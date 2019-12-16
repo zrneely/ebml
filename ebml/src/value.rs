@@ -304,19 +304,29 @@ impl From<String> for StringValue {
         }
     }
 }
-impl<T: AsRef<str>> From<T> for StringValue {
-    default fn from(data: T) -> Self {
-        StringValue {
-            data: data.as_ref().to_string(),
-            padding_len: 0,
-        }
-    }
-}
+// TODO: this can be enabled once specialization lands
+// impl<T: AsRef<str>> From<T> for StringValue {
+//     fn from(data: T) -> Self {
+//         StringValue {
+//             data: data.as_ref().to_string(),
+//             padding_len: 0,
+//         }
+//     }
+// }
 impl StringValue {
     /// Creates a string value with some amount of 0-padding appended to it. The padding is
     /// reflected in the size of the value but not the representation.
     pub fn with_padding(data: String, padding_len: usize) -> Self {
         StringValue { data, padding_len }
+    }
+
+    /// Creates a StringValue from a reference to an [`str`]. We cannot implement From here
+    /// without specialization.
+    pub fn from_str<T: AsRef<str>>(data: T) -> Self {
+        StringValue {
+            data: data.as_ref().to_string(),
+            padding_len: 0,
+        }
     }
 }
 impl EbmlValue for StringValue {
@@ -415,12 +425,19 @@ pub struct BinaryValue {
     data: Vec<u8>,
 }
 impl<T: AsRef<[u8]>> From<T> for BinaryValue {
-    default fn from(data: T) -> Self {
+    fn from(data: T) -> Self {
         BinaryValue { data: data.as_ref().to_vec() }
     }
 }
-impl From<Vec<u8>> for BinaryValue {
-    fn from(data: Vec<u8>) -> Self {
+// TODO: this can be enabled once specialization lands
+// impl From<Vec<u8>> for BinaryValue {
+//     fn from(data: Vec<u8>) -> Self {
+//         BinaryValue { data }
+//     }
+// }
+impl BinaryValue {
+    /// Creates a StringValue from a raw [`Vec`]. We cannot implement From here without specialization.
+    fn from_vec(data: Vec<u8>) -> Self {
         BinaryValue { data }
     }
 }

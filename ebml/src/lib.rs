@@ -4,9 +4,6 @@
         unsafe_code, unused)]
 #![warn(dead_code)]
 
-#![feature(specialization)]
-#![feature(const_fn)]
-
 //! This library provides tools for reading and writing documents in the Extensible Binary Markup
 //! Language format. Like XML, EBML is an extensible format with many possible elements, and has a
 //! concept of a "EBML Document Type Definition", or EDTD, a specification of the various element
